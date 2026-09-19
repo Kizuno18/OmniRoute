@@ -7,7 +7,7 @@
  * `usage_history` rows correctly by DATE(timestamp) + provider.
  *
  * Seeds an in-memory temp SQLite DB and releases the handle in test.after
- * (CLAUDE.md PII/Stream Learnings #3 — otherwise node:test hangs).
+ * (AGENTS.md PII/Stream Learnings #3 — otherwise node:test hangs).
  */
 import test from "node:test";
 import assert from "node:assert/strict";

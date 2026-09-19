@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // scripts/check/check-test-masking.mjs
-// Gate anti test-masking (a preocupação nº1 do CLAUDE.md: "subagente não pode
+// Gate anti test-masking (a preocupação nº1 do AGENTS.md: "subagente não pode
 // enfraquecer/remover asserts pra ficar verde"). Para cada arquivo de teste MODIFICADO
 // num PR, compara a contagem de asserts base vs HEAD: sinaliza REMOÇÃO LÍQUIDA de asserts
 // e NOVAS tautologias `assert.ok(true)`. Heurístico mas alto-sinal. Espelha o plumbing

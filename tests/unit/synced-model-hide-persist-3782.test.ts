@@ -33,7 +33,7 @@ before(() => {
 
 after(() => {
   // Release the SQLite handle so the Node test runner can exit, then remove the
-  // throwaway DATA_DIR (CLAUDE.md "Database Handles in Tests").
+  // throwaway DATA_DIR (AGENTS.md "Database Handles in Tests").
   resetDbInstance();
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });

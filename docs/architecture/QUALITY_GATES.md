@@ -9,7 +9,7 @@ It describes each gate, what it validates, which CI job it runs in, whether it u
 a ratchet baseline or a pass/fail policy, and whether it blocks the build or is advisory.
 
 For a short summary and the allowlist policy, see the "Quality Gates & Ratchets" section
-in `CLAUDE.md`. For the critical assessment, maturity classification, and tool-agnostic
+in `AGENTS.md`. For the critical assessment, maturity classification, and tool-agnostic
 replication plan of the same system, see the
 [Quality Gate Playbook](../ops/QUALITY_GATE_PLAYBOOK.md).
 

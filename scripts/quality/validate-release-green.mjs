@@ -278,7 +278,7 @@ export function extractCiGates(
 /**
  * Map a thrown `execFileSync` error to a {code, out} gate result. Exported as a pure helper
  * so the timeout/hang path has a regression test: a gate that exceeds its ceiling (e.g. the unit
- * suite wedged on an unreleased SQLite handle — see CLAUDE.md "Database Handles in Tests") is
+ * suite wedged on an unreleased SQLite handle — see AGENTS.md "Database Handles in Tests") is
  * killed by `execFileSync` (`err.killed === true`) and MUST surface as a visible non-zero gate,
  * never an infinite block that the release captain mistakes for a hang and kills the pre-flight.
  */

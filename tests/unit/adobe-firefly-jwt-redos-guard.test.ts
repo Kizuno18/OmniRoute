@@ -9,7 +9,7 @@ import {
 // CodeQL js/polynomial-redos (#754/#755/#756): the JWT-shaped extraction regexes in
 // adobeFireflyClient.ts used unbounded `[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`
 // sequences over attacker-controlled cookie/HAR blobs. The fix bounds every segment to
-// {1,4096} (CodeQL's endorsed remediation + the CLAUDE.md ReDoS convention). These tests
+// {1,4096} (CodeQL's endorsed remediation + the AGENTS.md ReDoS convention). These tests
 // guard the two things that could regress from that change:
 //   (a) bounding stays GENEROUS enough that realistic long Adobe/IMS tokens still parse
 //       (a naive over-tighten like {1,64} would truncate real tokens — this catches it),

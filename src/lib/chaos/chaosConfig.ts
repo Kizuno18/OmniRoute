@@ -49,7 +49,7 @@ export const DEFAULT_CHAOS_CONFIG: ChaosConfig = {
 // hand-rolled SQL against a nonexistent `settings` table (the original PR queried
 // a table that was never created — every read silently fell back to defaults and
 // every write/reset threw). Follows the repo convention of routing all settings
-// reads/writes through src/lib/db/settings.ts (see CLAUDE.md → Database).
+// reads/writes through src/lib/db/settings.ts (see AGENTS.md → Database).
 
 const CONFIG_KEY = "chaosModeConfig";
 

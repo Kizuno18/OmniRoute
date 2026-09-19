@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // scripts/check/check-route-guard-membership.ts
-// Quality gate: route-guard membership (CLAUDE.md Hard Rules #15 + #17).
+// Quality gate: route-guard membership (AGENTS.md Hard Rules #15 + #17).
 //
 // WHY: routes that spawn child processes (`npm install`, `node`, MITM/Playwright,
 // worker_threads) MUST be classified loopback-only by `isLocalOnlyPath()` in
@@ -42,7 +42,7 @@ function assertNoStaleEntries(
 }
 
 // Spawn-capable route roots (relative to repo root). Mirrors the spawn-capable
-// prefixes documented in routeGuard.ts (SPAWN_CAPABLE_PREFIXES) and CLAUDE.md
+// prefixes documented in routeGuard.ts (SPAWN_CAPABLE_PREFIXES) and AGENTS.md
 // Hard Rules #15/#17 for the dirs that physically exist under src/app/api/.
 export const SPAWN_CAPABLE_ROUTE_ROOTS: ReadonlyArray<string> = [
   "src/app/api/services",

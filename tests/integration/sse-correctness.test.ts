@@ -90,7 +90,7 @@ test("3. no leaked idle timers across N sequential streams", async () => {
 });
 
 test("4. final snapshot does not duplicate tail text", async () => {
-  // Regression guard for the SSE snapshot bug (CLAUDE.md §2, Fase 8 B spec §4.2):
+  // Regression guard for the SSE snapshot bug (AGENTS.md §2, Fase 8 B spec §4.2):
   // the text 'Hello' should appear EXACTLY ONCE in the output, not duplicated.
   const { up, out } = makeStream();
   up.push('data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n');

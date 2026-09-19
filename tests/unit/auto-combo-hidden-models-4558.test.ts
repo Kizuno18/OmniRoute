@@ -23,7 +23,7 @@ import fs from "node:fs";
 // Hermetic DB: this test writes overrides into the `modelCompatOverrides`
 // key_value namespace. Without an isolated DATA_DIR it would leak that state
 // into the shared dev/CI database. Point DATA_DIR at a throwaway dir before any
-// import that opens the SQLite handle (CLAUDE.md "Database Handles in Tests").
+// import that opens the SQLite handle (AGENTS.md "Database Handles in Tests").
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-test-hidden-4558-"));
 process.env.DATA_DIR = tmpDir;
 

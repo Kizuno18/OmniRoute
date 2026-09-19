@@ -31,7 +31,7 @@ export interface AvailabilitySortableConnection {
  * Effective status for a connection, factoring in connection cooldown.
  *
  * A connection can be recorded as `testStatus: "unavailable"` (see the
- * "Connection Cooldown" resilience layer in CLAUDE.md) yet the cooldown
+ * "Connection Cooldown" resilience layer in AGENTS.md) yet the cooldown
  * itself is lazy — once `rateLimitedUntil` is in the past, the connection is
  * eligible again even though nothing has re-tested it yet. Treat that case
  * as "active" so the reorder button (and the row's own badge, which this

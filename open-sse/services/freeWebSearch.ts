@@ -26,7 +26,7 @@ const DDG_USER_AGENT =
 // before class; quotes may be single or double) and `<td class='result-snippet'>…</td>`.
 // The inner-content captures are HARD-BOUNDED ({0,N}?) and the whole body is truncated
 // (MAX_HTML_BYTES) so adversarial/unclosed HTML can't cause catastrophic backtracking
-// (ReDoS) — real titles/snippets are short. See CLAUDE.md PII learnings §1.
+// (ReDoS) — real titles/snippets are short. See AGENTS.md PII learnings §1.
 const ANCHOR_RE = /<a\b([^>]*?class=['"][^'"]*result-link[^'"]*['"][^>]*)>([\s\S]{0,512}?)<\/a>/gi;
 const HREF_RE = /href=['"]([^'"]+)['"]/i;
 const SNIPPET_RE =

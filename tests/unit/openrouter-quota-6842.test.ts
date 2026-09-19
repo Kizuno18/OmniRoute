@@ -338,7 +338,7 @@ test("checkFallbackError classifies OpenRouter 402 as quota_exhausted with a rea
 });
 
 test("checkFallbackError 402 does NOT trip the whole-provider circuit breaker set", async () => {
-  // Per CLAUDE.md's resilience-layer contract, only 408/500/502/503/504 trip
+  // Per AGENTS.md's resilience-layer contract, only 408/500/502/503/504 trip
   // the provider breaker. 402 must never be in that set, for any provider.
   const PROVIDER_BREAKER_STATUSES = new Set([408, 500, 502, 503, 504]);
   assert.equal(PROVIDER_BREAKER_STATUSES.has(402), false);

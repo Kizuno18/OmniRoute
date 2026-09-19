@@ -587,7 +587,7 @@ export class DuckDuckGoWebExecutor extends BaseExecutor {
         clearTimeout(timeout);
         // #6996: surface the real upstream status instead of a hardcoded 503 so a
         // 429 rate-limit gets a connection-cooldown, not a whole-provider circuit
-        // breaker trip (see CLAUDE.md "Provider Circuit Breaker" — only
+        // breaker trip (see AGENTS.md "Provider Circuit Breaker" — only
         // 408/500/502/503/504 should trip it, not 429). Any other non-2xx status
         // (403 anti-bot challenge, genuine 5xx, or a thrown network error where
         // status is null) keeps the existing 503 fallback.

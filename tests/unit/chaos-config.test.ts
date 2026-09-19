@@ -7,7 +7,7 @@
  * DEFAULT_CHAOS_CONFIG and every write/reset threw at runtime. This module now
  * routes persistence through src/lib/db/settings.ts::getSettings/updateSettings
  * (the `key_value` table, namespace 'settings'), matching the repo convention
- * (CLAUDE.md → Database: never write raw SQL outside src/lib/db/).
+ * (AGENTS.md → Database: never write raw SQL outside src/lib/db/).
  */
 import test from "node:test";
 import assert from "node:assert/strict";

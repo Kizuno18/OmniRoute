@@ -15,7 +15,7 @@
  * exists where DNS points at 127.0.0.1 with nothing listening there.
  *
  * Uses the project's DATA_DIR-tmp + resetDbInstance pattern so the Node native
- * test runner does not hang on open SQLite handles (CLAUDE.md PII learning #3).
+ * test runner does not hang on open SQLite handles (AGENTS.md PII learning #3).
  */
 import test from "node:test";
 import assert from "node:assert/strict";

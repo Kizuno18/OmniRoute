@@ -5,7 +5,7 @@
  * keep hijacking those hostnames machine-wide after the user thinks MITM is off.
  *
  * Uses the project's DATA_DIR-tmp + resetDbInstance pattern so the Node native
- * test runner does not hang on open SQLite handles (CLAUDE.md PII learning #3).
+ * test runner does not hang on open SQLite handles (AGENTS.md PII learning #3).
  */
 import test from "node:test";
 import assert from "node:assert/strict";

@@ -126,7 +126,7 @@ export function evaluatePrBody(body) {
       "  a) Add a fenced code block (```) containing test-runner or command output, OR\n" +
       "  b) Add a section headed '## Evidence', '## Validation', '## Test output', etc., OR\n" +
       "  c) Add an inline code span with a result token (e.g. `42 passing`, `PASSED`).\n" +
-      "See CLAUDE.md → Hard Rule #18.",
+      "See AGENTS.md → Hard Rule #18.",
   };
 }
 

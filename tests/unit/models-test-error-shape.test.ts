@@ -4,7 +4,7 @@
 // that value directly in a toast, so an object froze the whole page (React #31).
 // The "test a model → screen froze" bug.
 //
-// DB handles released in test.after (CLAUDE.md learning: unreleased SQLite
+// DB handles released in test.after (AGENTS.md learning: unreleased SQLite
 // handles hang node:test).
 
 import test from "node:test";

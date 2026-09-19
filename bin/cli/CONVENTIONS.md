@@ -74,7 +74,7 @@ All API calls go through `apiFetch(path, opts)` (`bin/cli/api.mjs`), which:
 - Injects `x-omniroute-cli-token` when applicable (see task 8.12).
 - Applies a per-attempt timeout (`--timeout 30000`, default 30s).
 - Maps status → exit code (401→4, 429→5, 5xx→1, etc.).
-- Never exposes `err.stack` (CLAUDE.md hard rule #12).
+- Never exposes `err.stack` (AGENTS.md hard rule #12).
 - Applies exponential backoff with jitter on retryable statuses.
 
 ### Retry defaults
@@ -217,7 +217,7 @@ Commands that mutate state (delete, reset, `--force`) **must**:
 
 ## 12. References
 
-- CLAUDE.md hard rules — especially #11 (publicCreds), #12 (error
+- AGENTS.md hard rules — especially #11 (publicCreds), #12 (error
   sanitization), #13 (shell injection).
 - `docs/security/ERROR_SANITIZATION.md` — the only acceptable error shapes.
 - `tests/unit/cli-tools-i18n.test.ts` — current i18n infrastructure (pre-`t()`).

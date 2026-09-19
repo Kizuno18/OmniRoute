@@ -5,7 +5,7 @@
 // `wss:` — so a plain-`ws:` connection to a non-loopback host was blocked by the
 // browser. The fix permits the bare `ws:` scheme (symmetric with the bare `wss:` that
 // was already allowed), without introducing any global Next.js middleware (the project
-// intentionally has none — interception is route-specific; see CLAUDE.md / AGENTS.md).
+// intentionally has none — interception is route-specific; see AGENTS.md / AGENTS.md).
 //
 // This test pins the connect-src directive in next.config.mjs so the LAN/Tailscale WS
 // allowance cannot silently regress, while confirming the other security directives are
@@ -59,7 +59,7 @@ test("#5083 fix does NOT introduce a global Next.js middleware", () => {
   } catch {
     exists = false;
   }
-  assert.equal(exists, false, "src/middleware.ts must not exist (no global middleware — see CLAUDE.md)");
+  assert.equal(exists, false, "src/middleware.ts must not exist (no global middleware — see AGENTS.md)");
 });
 
 test("#5083 baseline security directives remain intact in the CSP", () => {

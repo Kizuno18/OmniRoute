@@ -2,9 +2,9 @@
 
 > **Single source of truth.** This file holds ALL project rules, conventions, architecture notes
 > and Hard Rules for every AI assistant working this repository (Claude Code, Gemini, Codex,
-> Copilot, and any other agent). `CLAUDE.md` and `GEMINI.md` only add assistant-specific deltas
-> and point back here. When a rule needs to change, change it HERE — never re-fork it into an
-> assistant-specific file.
+> Copilot, and any other agent). `GEMINI.md` only adds assistant-specific deltas and points back
+> here. When a rule needs to change, change it HERE — never re-fork it into an assistant-specific
+> file.
 
 ## Quick Start
 
@@ -260,7 +260,7 @@ Read the nearest `AGENTS.md` and the linked deep-dive before making a non-trivia
 
 - Configuration files (`vitest.config.ts`, `next.config.mjs`, `eslint.config.mjs`, `tsconfig*.json`, `playwright.config.ts`, `prettier.config.mjs`, `postcss.config.mjs`, `sonar-project.properties`, `fly.toml`, `docker-compose*.yml`, `Dockerfile`)
 - Dependency files (`package.json`, `package-lock.json`)
-- Documentation files (`README.md`, `CHANGELOG.md`, `ROADMAP.md`, `LICENSE`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `llm.txt`, `Tuto_Qdrant.md`)
+- Documentation files (`README.md`, `CHANGELOG.md`, `ROADMAP.md`, `LICENSE`, `AGENTS.md`, `GEMINI.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `llm.txt`, `Tuto_Qdrant.md`)
 - CI/CD files and ignore definitions (`.gitignore`, `.dockerignore`, `.npmignore`, `.npmrc`, `.node-version`, `.nvmrc`, `.env.example`)
 
 When creating _any_ validation tests or one-off logic scripts, default to `scripts/ad-hoc/` or `tests/unit/` according to your goals. Do not pollute the `/` root context.
@@ -709,6 +709,32 @@ When parsing streaming LLM responses (e.g. Responses API), check if a chunk repr
 Ensure that any unit tests that trigger database migrations or establish SQLite connections call `resetDbInstance()` and properly clean up/close all DB handles in a `test.after(...)` hook. Failure to release database connection handles will cause Node's native test runner to hang indefinitely.
 
 ---
+
+## AI-Assistant Tooling Notes
+
+Operational refinements for specific harnesses (formerly kept in `CLAUDE.md`, folded in here
+since this file is now the single source of truth for every assistant):
+
+- **Worktree creation**: confirm the base branch with the operator (via a structured
+  question/confirmation tool when your harness has one, e.g. Claude Code's `AskUserQuestion`)
+  unless they already told you. Claude Code specifically: prefer the native `EnterWorktree`
+  tool — it already creates worktrees under `.claude/worktrees/` (the canonical path). Create
+  the worktree with the documented `git worktree add` command, then call `EnterWorktree` with
+  its `path`.
+- **Subagent dispatch**: subagents (Agent tool / Workflow scripts / any dispatched sub-session)
+  do not inherit this file. Replicate the `git stash` ban (Hard Rule #22a) and the `_tasks`
+  rules (Hard Rule #23d) verbatim in the prompt of every subagent that touches git — the
+  recorded recurrences of both incidents came through a subagent that never saw this file.
+- **Scratch / temporary files**: write disposable working files (exports, generated zips,
+  one-off intermediate outputs — anything you'd otherwise put in `/tmp`) to `_artifacts/` at
+  the repo root instead of the harness's default session scratchpad. `_artifacts/` is a root
+  `_*` path: already gitignored (see "Root `_*` paths" above), lives on disk only, never
+  tracked. Keeping scratch output inside the project makes it trivial for the operator to find
+  and delete everything temporary in one place, instead of hunting across ephemeral
+  session-specific temp directories that vanish or accumulate untracked. Do not confuse this
+  with `_tasks/` (Hard Rule #23, its own private git repo for durable plans/specs/research/
+  hand-offs) — `_artifacts/` is for disposable working files only, nothing here needs to
+  survive or be versioned.
 
 ## Local development access
 

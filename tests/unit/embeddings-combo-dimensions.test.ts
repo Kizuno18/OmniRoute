@@ -10,7 +10,7 @@
  * Test 4: Combos without `dimensions` leave the upstream body unchanged.
  *
  * Uses a throwaway DATA_DIR so migrations run against a temp DB.
- * DB handle released in test.after() per CLAUDE.md learning #3.
+ * DB handle released in test.after() per AGENTS.md learning #3.
  */
 
 import test from "node:test";

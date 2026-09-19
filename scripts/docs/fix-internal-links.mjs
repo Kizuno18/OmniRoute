@@ -7,7 +7,7 @@
 //   --internal  Rewrite relative links inside docs/<subfolder>/*.md to point at
 //               the new subfolder paths (e.g. ./AUTO-COMBO.md -> ../routing/AUTO-COMBO.md).
 //   --external  Rewrite absolute-style `docs/<DOC>.md` references in files
-//               outside docs/ (README, CLAUDE.md, .agents, .claude, scripts, src,
+//               outside docs/ (README, AGENTS.md, .agents, .claude, scripts, src,
 //               tests, etc.) to `docs/<subfolder>/<DOC>.md`.
 //
 // Usage:

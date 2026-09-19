@@ -870,7 +870,7 @@ jobs:
           node-version: ${{ env.CI_NODE_VERSION }}
           cache: npm
       - uses: ./.github/actions/npm-ci-retry
-      # The second test runner (CLAUDE.md: "Both test runners must pass") — was never
+      # The second test runner (AGENTS.md: "Both test runners must pass") — was never
       # wired into CI until the 2026-06-09 quality audit (Fase 6A.2).
       # WS5.2/5.3 (v3.8.49 plan): JUnit output feeds Trunk Flaky Tests (advisory upload
       # below). node:test stays OUT of the first wave (fd1-sensitive reporter stream).

@@ -3,7 +3,7 @@
  *
  * Seeds an in-memory temp SQLite DB and asserts each new db function returns the
  * correct aggregation. DB handles are released in test.after to prevent Node
- * native test runner from hanging (CLAUDE.md PII/Stream Learnings #3).
+ * native test runner from hanging (AGENTS.md PII/Stream Learnings #3).
  */
 import test from "node:test";
 import assert from "node:assert/strict";

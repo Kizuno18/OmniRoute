@@ -8,7 +8,7 @@
 // tokenRefresh.ts) talks to a fake OpenAI OAuth token endpoint instead of the
 // network — the refresh exchange itself is reused, not reimplemented.
 //
-// DB handles are released in test.after (CLAUDE.md learning: unreleased
+// DB handles are released in test.after (AGENTS.md learning: unreleased
 // SQLite handles hang node:test).
 
 import test from "node:test";

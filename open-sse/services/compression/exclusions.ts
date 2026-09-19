@@ -9,7 +9,7 @@
  * Pattern syntax: `*` is the only wildcard. Every other regex metacharacter is
  * escaped before the pattern is compiled, so a pattern like `gpt-5.6` matches the
  * literal string only (not `gpt-5x6`) — never build a regex from raw operator
- * input without escaping (ReDoS convention, see CLAUDE.md).
+ * input without escaping (ReDoS convention, see AGENTS.md).
  */
 
 const MAX_EXCLUSIONS = 200;

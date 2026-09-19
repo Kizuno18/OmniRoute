@@ -12,7 +12,7 @@
  *  5. countImportedRows returns correct counts from the live DB.
  *
  * DB handles are released in test.after to prevent the Node native runner from
- * hanging indefinitely (CLAUDE.md PII/Stream Learnings #3).
+ * hanging indefinitely (AGENTS.md PII/Stream Learnings #3).
  */
 import test from "node:test";
 import assert from "node:assert/strict";

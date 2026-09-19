@@ -6,7 +6,7 @@
  * for routing (via `createBuiltinAutoCombo`, unfiltered by any per-key
  * exclusion so the operator can see — and toggle — excluded candidates), then
  * decorates each candidate with live reachability derived from the existing
- * resilience reads (CLAUDE.md "Resilience Runtime State"):
+ * resilience reads (AGENTS.md "Resilience Runtime State"):
  *   - provider circuit breaker: `getCircuitBreaker(provider).getStatus()` /
  *     `.canExecute()` — NEVER raw `state`, so an expired breaker (lazy
  *     recovery) doesn't show as permanently open.
