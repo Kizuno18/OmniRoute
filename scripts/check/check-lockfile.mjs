@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // scripts/check/check-lockfile.mjs
-// Gate de política de lockfile (CLAUDE.md — extensão Hard Rule #1).
+// Gate de política de lockfile (AGENTS.md — extensão Hard Rule #1).
 //
 // Objetivo: detectar supply-chain poisoning no package-lock.json antes que código
 // malicioso entre no repo. Verifica:

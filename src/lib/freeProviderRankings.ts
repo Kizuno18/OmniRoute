@@ -244,7 +244,7 @@ const TERMINAL_CONNECTION_STATUSES = new Set(["credits_exhausted", "banned", "ex
  * A connection is usable when it is neither terminal (`testStatus` ∉
  * {credits_exhausted, banned, expired}) nor currently rate-limited
  * (`rateLimitedUntil` null or in the past — lazy recovery, matching the
- * Connection Cooldown rule in CLAUDE.md).
+ * Connection Cooldown rule in AGENTS.md).
  *
  * NOTE: granularity is PROVIDER-level (connection = provider+account). Per-model
  * quota lockout (model lockout, `open-sse/services/accountFallback.ts`) is a

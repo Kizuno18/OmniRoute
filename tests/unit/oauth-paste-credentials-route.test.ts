@@ -8,7 +8,7 @@
 // oauth-paste-credentials.test.ts and re-asserted through the HTTP boundary here.
 //
 // Auth is disabled via settings (requireLogin:false) so we reach the action
-// dispatch rather than a 401. DB handles are released in test.after (CLAUDE.md
+// dispatch rather than a 401. DB handles are released in test.after (AGENTS.md
 // learning: unreleased SQLite handles hang node:test).
 
 import test from "node:test";

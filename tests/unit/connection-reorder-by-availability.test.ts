@@ -8,7 +8,7 @@ import {
 
 // Reorder-by-availability — upstream 9router PR #2558 ported to OmniRoute's
 // resilience model (rateLimitedUntil cooldown + testStatus), not the
-// upstream `modelLock_*` field convention. See CLAUDE.md "Resilience Runtime
+// upstream `modelLock_*` field convention. See AGENTS.md "Resilience Runtime
 // State" → Connection Cooldown.
 
 test("sortConnectionsByAvailability moves available connections to the top", () => {

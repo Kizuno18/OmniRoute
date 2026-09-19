@@ -4,7 +4,7 @@
 // shows it, but with no OAuth handler), so the route now returns a clear 400
 // pointing at the Import flow instead of crashing.
 //
-// DB handles released in test.after (CLAUDE.md learning: unreleased SQLite
+// DB handles released in test.after (AGENTS.md learning: unreleased SQLite
 // handles hang node:test).
 
 import test from "node:test";

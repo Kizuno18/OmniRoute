@@ -2,7 +2,7 @@
  * Gap 4: portable JSON import/export of AgentBridge config (bypass patterns +
  * custom hosts + per-agent model mappings) so users can replicate a setup
  * across machines. Schema validation is pure; export/import roundtrip uses the
- * DATA_DIR-tmp + resetDbInstance pattern (CLAUDE.md PII learning #3).
+ * DATA_DIR-tmp + resetDbInstance pattern (AGENTS.md PII learning #3).
  */
 import test from "node:test";
 import assert from "node:assert/strict";

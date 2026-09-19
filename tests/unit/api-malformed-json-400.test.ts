@@ -12,7 +12,7 @@
  * DB/auth setup mirrors tests/unit/agentSkills-routes.test.ts: a temp DATA_DIR
  * with no configured password means requireManagementAuth() is a no-op (auth is
  * not required), so the handlers run unauthenticated. DB handles are released in
- * test.after (resetDbInstance) per CLAUDE.md — unreleased SQLite handles hang the
+ * test.after (resetDbInstance) per AGENTS.md — unreleased SQLite handles hang the
  * Node test runner.
  */
 

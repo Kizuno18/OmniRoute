@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { discoverNormalizeLine } from "../../../open-sse/services/compression/engines/rtk/discover.ts";
 
-describe("RTK discover — ReDoS safety (CLAUDE.md regex rule)", () => {
+describe("RTK discover — ReDoS safety (AGENTS.md regex rule)", () => {
   it("normalizes a long word-char line with no '@' in bounded time", () => {
     // The package@version regex used to be /[\w][\w.-]*@.../ — catastrophic
     // backtracking on a long word-char run lacking '@'. Bounded quantifiers fix it.

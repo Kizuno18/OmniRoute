@@ -5,7 +5,7 @@
  * Seeds an in-memory temp SQLite DB for each table and asserts each new db
  * function returns the correct rows / counts. DB handles are released in
  * test.after to prevent Node native test runner from hanging
- * (CLAUDE.md PII/Stream Learnings #3).
+ * (AGENTS.md PII/Stream Learnings #3).
  */
 import test from "node:test";
 import assert from "node:assert/strict";

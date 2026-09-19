@@ -3,7 +3,7 @@
  *
  * `TransformInfo` mistura contadores inofensivos com material que NUNCA pode
  * ser persistido: bytes PNG, `imageSourceText(s)`, `recoverable[].text`, os
- * sha8 de system/CLAUDE.md/primeira mensagem, os nomes de tags observadas e o
+ * sha8 de system/AGENTS.md/primeira mensagem, os nomes de tags observadas e o
  * bloco `env` (cwd, branch, versões). Copiar o objeto inteiro seria transformar
  * a telemetria de compressão num vazamento do prompt.
  *

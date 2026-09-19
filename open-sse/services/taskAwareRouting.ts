@@ -14,7 +14,7 @@
  *
  * ReDoS safety: all regexes use word-boundary anchors with alternation of fixed
  * literals, no variable-length quantifiers on overlapping groups. Safe per
- * CLAUDE.md PII/Regex learnings.
+ * AGENTS.md PII/Regex learnings.
  */
 
 import { createHash } from "node:crypto";

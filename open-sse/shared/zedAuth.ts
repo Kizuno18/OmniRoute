@@ -15,7 +15,7 @@
  *
  * No client_id/client_secret/Firebase key is embedded anywhere in this file —
  * the "credential" is a keypair generated fresh per login attempt, so
- * CLAUDE.md Hard Rule #11 (resolvePublicCred for embedded upstream secrets)
+ * AGENTS.md Hard Rule #11 (resolvePublicCred for embedded upstream secrets)
  * does not apply here.
  *
  * Ported from decolua/9router PR #2328 (open-sse/shared/zedAuth.js),

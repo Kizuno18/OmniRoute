@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // scripts/check/check-public-creds.mjs
-// Gate de segurança — CLAUDE.md Hard Rule #11.
+// Gate de segurança — AGENTS.md Hard Rule #11.
 //
 // Credenciais públicas de upstream (OAuth client_id/client_secret de CLIs públicas
 // + Firebase web keys) DEVEM ser embutidas via `resolvePublicCred()` /
@@ -186,7 +186,7 @@ function main() {
   if (allMisses.length) {
     console.error(
       `[check-public-creds] ${allMisses.length} credencial(is) pública(s) como string literal ` +
-        `(viola CLAUDE.md Hard Rule #11):\n` +
+        `(viola AGENTS.md Hard Rule #11):\n` +
         allMisses.map((m) => "  ✗ " + m).join("\n") +
         `\n  → embuta via resolvePublicCred()/resolvePublicCredMulti() ` +
         `(open-sse/utils/publicCreds.ts). Ver docs/security/PUBLIC_CREDS.md.\n` +

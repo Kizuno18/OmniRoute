@@ -11,7 +11,7 @@
  * no password is available.
  *
  * DATA_DIR-tmp + resetDbInstance pattern prevents the Node test runner from
- * hanging on open SQLite handles (CLAUDE.md PII learning #3).
+ * hanging on open SQLite handles (AGENTS.md PII learning #3).
  */
 import test from "node:test";
 import assert from "node:assert/strict";

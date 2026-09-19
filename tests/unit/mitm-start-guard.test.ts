@@ -26,7 +26,7 @@
  *       again without ever calling it.
  *
  * DATA_DIR-tmp pattern prevents the Node test runner from hanging on open
- * SQLite handles (CLAUDE.md PII learning #3), even though these tests never
+ * SQLite handles (AGENTS.md PII learning #3), even though these tests never
  * reach the DB-touching code path.
  */
 import test from "node:test";

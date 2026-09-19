@@ -7,7 +7,7 @@
  * and runs in the pino `hooks.logMethod` (main thread, so it works with transports).
  *
  * Patterns are strictly bounded (single, non-overlapping character classes with `{n,}`
- * limits) to avoid catastrophic backtracking on untrusted input — see CLAUDE.md
+ * limits) to avoid catastrophic backtracking on untrusted input — see AGENTS.md
  * "PII & Stream Sanitization Learnings" §1.
  */
 

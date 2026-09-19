@@ -3,7 +3,7 @@
 // Imports a Codex connection from a bare ChatGPT access token — no refresh
 // token required. Auth is disabled via settings (requireLogin:false) so we
 // reach the schema/decode logic rather than a 401. DB handles are released
-// in test.after (CLAUDE.md learning: unreleased SQLite handles hang node:test).
+// in test.after (AGENTS.md learning: unreleased SQLite handles hang node:test).
 
 import test from "node:test";
 import assert from "node:assert/strict";

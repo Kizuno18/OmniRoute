@@ -30,7 +30,7 @@ const PRO = "deepseek-v4-pro";
 
 test.after(() => {
   // Release the SQLite handle so the Node test runner can exit, then remove the
-  // throwaway DATA_DIR (CLAUDE.md "Database Handles in Tests").
+  // throwaway DATA_DIR (AGENTS.md "Database Handles in Tests").
   core.resetDbInstance();
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
 });

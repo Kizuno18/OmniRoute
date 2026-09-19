@@ -5,7 +5,7 @@
 # it with batching + automatic batch bisection (a red batch of N costs ~log2(N)
 # revalidations instead of N). Mergify Open Source plan: free, unlimited, public repo.
 #
-# GOVERNANCE (non-negotiable, mirrors CLAUDE.md Hard Rules #21/#22 + the owner's
+# GOVERNANCE (non-negotiable, mirrors AGENTS.md Hard Rules #21/#22 + the owner's
 # pre-merge ⭐ gate):
 #   • A PR enters the queue ONLY via the `queue` label — applied by the owner (or a
 #     session acting for the owner) AFTER the pre-merge ⭐ report/decision. The label

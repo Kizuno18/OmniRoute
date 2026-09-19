@@ -2,7 +2,7 @@
 // everything testable without a real auth.x.ai round-trip (that half is
 // validated live on the VPS per Hard Rule #18, see the PR description).
 //
-// DB handles released in test.after (CLAUDE.md learning: unreleased SQLite
+// DB handles released in test.after (AGENTS.md learning: unreleased SQLite
 // handles hang node:test).
 
 import test from "node:test";

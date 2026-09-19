@@ -34,7 +34,7 @@ export function discoverNormalizeLine(line: string): string {
   // Handles both original (left-pad@1.2.3) and already-normalised (left-pad@<N>)
   // Bounded quantifiers ({0,N}) are mandatory: `[\w]` ⊂ `[\w.-]` followed by a
   // required `@` is the classic catastrophic-backtracking shape on a long
-  // word-char run with no `@` (CLAUDE.md ReDoS rule). Real package names are short.
+  // word-char run with no `@` (AGENTS.md ReDoS rule). Real package names are short.
   s = s.replace(/[\w][\w.-]{0,128}@(?:<N>|\d[\w.-]{0,64})/g, "<PKG>@<N>");
   // Error/exit codes like E404, ENOENT, E2BIG, EACCES
   s = s.replace(/\bE[A-Z0-9]{2,}\b/g, "<CODE>");

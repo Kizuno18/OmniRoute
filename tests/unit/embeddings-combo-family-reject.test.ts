@@ -15,7 +15,7 @@ const { createEmbeddingResponse } = await import("../../src/lib/embeddings/servi
 const { mergeModelCompatOverride } = await import("../../src/lib/db/models.ts");
 
 test.after(() => {
-  // Release the SQLite handle so the native test runner can exit (CLAUDE.md #3).
+  // Release the SQLite handle so the native test runner can exit (AGENTS.md #3).
   resetDbInstance();
 });
 
