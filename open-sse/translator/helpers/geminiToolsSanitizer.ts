@@ -62,7 +62,7 @@ function normalizeGeminiToolName(
 
   return namespaceStripped
     .replace(/[^a-zA-Z0-9_]/g, "_")
-    .replace(/_+/g, "_")
+    .replace(/_{3,}/g, "__")
     .replace(/^_+|_+$/g, "");
 }
 
@@ -243,13 +243,14 @@ export function buildGeminiTools(
 
   const result: GeminiTool[] = [];
 
+  if (functionDeclarations.length > 0) {
+    result.push({ functionDeclarations });
+    return result;
+  }
+
   if (googleSearchTool) {
     return [googleSearchTool];
   }
 
-  if (functionDeclarations.length > 0) {
-    result.push({ functionDeclarations });
-  }
-
-  return result.length > 0 ? result : undefined;
+  return undefined;
 }

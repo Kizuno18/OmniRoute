@@ -36,9 +36,16 @@ export function resolveRequestToolIdentity(identityMap: unknown, toolName: strin
       : identityMap && typeof identityMap === "object" && !Array.isArray(identityMap)
         ? Object.values(identityMap as Record<string, unknown>)
         : [];
+  const normalizedQuery = toolName.replace(/_+/g, "_");
   for (const candidate of candidates) {
     const identity = asRequestToolIdentity(candidate);
-    if (identity && `${identity.namespace}.${identity.name}` === toolName) return identity;
+    if (!identity) continue;
+    if (`${identity.namespace}.${identity.name}` === toolName) return identity;
+    if (`${identity.namespace}__${identity.name}` === toolName) return identity;
+    const normalizedIdentity = `${identity.namespace.replace(/_+/g, "_")}_${identity.name.replace(/_+/g, "_")}`;
+    if (normalizedIdentity === normalizedQuery || normalizedQuery === identity.name) {
+      return identity;
+    }
   }
 
   return null;
