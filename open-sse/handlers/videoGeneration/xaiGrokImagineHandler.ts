@@ -29,6 +29,13 @@ function buildXaiVideoPayload(model: string, prompt: string, body: XaiVideoBody)
   return payload;
 }
 
+function xaiVideoErrorMessage(
+  data: { error?: { message?: unknown }; message?: unknown } | null,
+  fallback: string
+) {
+  return sanitizeErrorMessage(String(data?.error?.message || data?.message || fallback));
+}
+
 /** POST the create-job request; resolves to the request_id or a ready error message. */
 async function createXaiVideoJob({
   baseUrl,
@@ -62,18 +69,15 @@ async function createXaiVideoJob({
     return { requestId };
   }
 
-  const errorMessage =
-    createData?.error?.message ||
-    createData?.message ||
-    "xAI video generation did not return request_id";
+  const errorMessage = xaiVideoErrorMessage(
+    createData,
+    "xAI video generation did not return request_id"
+  );
   if (log) {
-    log.error(
-      "VIDEO",
-      `xAI createJob failed (${createRes.status}): ${sanitizeErrorMessage(String(errorMessage))}`
-    );
+    log.error("VIDEO", `xAI createJob failed (${createRes.status}): ${errorMessage}`);
   }
   return {
-    error: sanitizeErrorMessage(String(errorMessage)),
+    error: errorMessage,
     status: createRes.ok ? 502 : createRes.status,
   };
 }
@@ -115,13 +119,7 @@ async function pollXaiVideoJob({
       return {
         terminal: "error",
         status: pollRes.status,
-        error: sanitizeErrorMessage(
-          String(
-            pollData?.error?.message ||
-              pollData?.message ||
-              `xAI video job ${requestId} polling failed`
-          )
-        ),
+        error: xaiVideoErrorMessage(pollData, `xAI video job ${requestId} polling failed`),
       };
     }
     lastStatus = pollData?.status || "pending";

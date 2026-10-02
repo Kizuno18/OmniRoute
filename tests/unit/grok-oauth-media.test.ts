@@ -126,6 +126,53 @@ for (const status of [401, 403, 429, 502]) {
   });
 }
 
+test("Grok images reject invalid options before dispatch", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => {
+    assert.fail("must not dispatch");
+  });
+  for (const options of [
+    { n: 0 },
+    { n: 11 },
+    { n: 1.5 },
+    { response_format: "jpeg" },
+    { size: "1792x1024" },
+  ]) {
+    const result = await handleImageGeneration({
+      body: { model: "gc/grok-imagine-image", prompt: "a cube", ...options },
+      credentials,
+      log: null,
+    });
+    assert.equal(result.status, 400);
+  }
+});
+
+test("Grok images preserve explicit native options over square-size defaults", async (t) => {
+  t.mock.method(globalThis, "fetch", async (_url, init) => {
+    assert.deepEqual(JSON.parse(String(init?.body)), {
+      model: "grok-imagine-image",
+      prompt: "a cube",
+      n: 2,
+      response_format: "url",
+      aspect_ratio: "16:9",
+      resolution: "2k",
+    });
+    return jsonResponse({ data: [{ url: "https://example.com/image.png" }] });
+  });
+  const result = await handleImageGeneration({
+    body: {
+      model: "gc/grok-imagine-image",
+      prompt: "a cube",
+      n: 2,
+      size: "1024x1024",
+      aspect_ratio: "16:9",
+      resolution: "2k",
+    },
+    credentials,
+    log: null,
+  });
+  assert.equal(result.success, true);
+});
+
 test("Grok media refuses API-key-only credentials instead of changing billing identity", async (t) => {
   t.mock.method(globalThis, "fetch", async () => {
     throw new Error("must not dispatch");
@@ -295,13 +342,63 @@ test("Grok speech rejects unsupported codecs and speeds before dispatch", async 
   t.mock.method(globalThis, "fetch", async () => {
     throw new Error("must not dispatch");
   });
-  for (const options of [{ response_format: "opus" }, { speed: 2 }, { speed: 0.5 }]) {
+  for (const options of [
+    { response_format: "opus" },
+    { speed: 2 },
+    { speed: 0.5 },
+    { speed: NaN },
+    { speed: Infinity },
+    { speed: "1" },
+  ]) {
     const response = await handleAudioSpeech({
       body: { model: "gc/grok-tts", input: "x", ...options },
       credentials,
     });
     assert.equal(response.status, 400);
   }
+});
+
+test("Grok speech preserves native format fields and response-format precedence", async (t) => {
+  t.mock.method(globalThis, "fetch", async (_url, init) => {
+    assert.deepEqual(JSON.parse(String(init?.body)), {
+      text: "hello",
+      voice_id: "rex",
+      language: "auto",
+      output_format: { codec: "wav", sample_rate: 24000 },
+    });
+    return new Response(new Uint8Array([1]), { headers: { "content-type": "audio/wav" } });
+  });
+  const response = await handleAudioSpeech({
+    body: {
+      model: "gc/grok-tts",
+      input: "hello",
+      voice: "eve",
+      voice_id: "rex",
+      output_format: { codec: "pcm", sample_rate: 24000 },
+      response_format: "wav",
+    },
+    credentials,
+  });
+  assert.equal(response.status, 200);
+  await response.arrayBuffer();
+});
+
+test("Grok speech ignores array output formats and retains default codec", async (t) => {
+  t.mock.method(globalThis, "fetch", async (_url, init) => {
+    assert.deepEqual(JSON.parse(String(init?.body)), {
+      text: "hello",
+      voice_id: "eve",
+      language: "auto",
+      output_format: { codec: "mp3" },
+    });
+    return new Response(new Uint8Array([1]), { headers: { "content-type": "audio/mpeg" } });
+  });
+  const response = await handleAudioSpeech({
+    body: { model: "gc/grok-tts", input: "hello", output_format: [] },
+    credentials,
+  });
+  assert.equal(response.status, 200);
+  await response.arrayBuffer();
 });
 
 test("Grok media refreshes one expired connection, persists rotation, and shares it across concurrent callers", async (t) => {

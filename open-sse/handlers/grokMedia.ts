@@ -64,6 +64,32 @@ async function requireSuccess(response: Response): Promise<void> {
   throw requestError(sanitizeErrorMessage(String(message)), response.status);
 }
 
+function buildGrokImagePayload(model: string, body: Record<string, unknown>) {
+  const count = body.n ?? 1;
+  const format = body.response_format ?? "url";
+  if (!Number.isInteger(count) || Number(count) < 1 || Number(count) > 10)
+    throw requestError("n must be an integer between 1 and 10");
+  if (format !== "url" && format !== "b64_json")
+    throw requestError("Grok images support url or b64_json response_format");
+  const payload: Record<string, unknown> = {
+    model,
+    prompt: body.prompt,
+    n: count,
+    response_format: format,
+  };
+  if (body.size !== undefined) {
+    if (body.size !== "1024x1024" && body.size !== "2048x2048")
+      throw requestError(
+        "Use 1024x1024, 2048x2048, or native aspect_ratio and resolution for Grok images"
+      );
+    payload.aspect_ratio = "1:1";
+    payload.resolution = body.size === "2048x2048" ? "2k" : "1k";
+  }
+  for (const key of ["aspect_ratio", "resolution"])
+    if (body[key] !== undefined) payload[key] = body[key];
+  return payload;
+}
+
 export async function handleGrokImageGeneration({
   model,
   providerConfig,
@@ -79,28 +105,7 @@ export async function handleGrokImageGeneration({
 }) {
   const startTime = Date.now();
   try {
-    const count = body.n ?? 1;
-    const format = body.response_format ?? "url";
-    if (!Number.isInteger(count) || Number(count) < 1 || Number(count) > 10)
-      throw requestError("n must be an integer between 1 and 10");
-    if (format !== "url" && format !== "b64_json")
-      throw requestError("Grok images support url or b64_json response_format");
-    const payload: Record<string, unknown> = {
-      model,
-      prompt: body.prompt,
-      n: count,
-      response_format: format,
-    };
-    if (body.size !== undefined) {
-      if (body.size !== "1024x1024" && body.size !== "2048x2048")
-        throw requestError(
-          "Use 1024x1024, 2048x2048, or native aspect_ratio and resolution for Grok images"
-        );
-      payload.aspect_ratio = "1:1";
-      payload.resolution = body.size === "2048x2048" ? "2k" : "1k";
-    }
-    for (const key of ["aspect_ratio", "resolution"])
-      if (body[key] !== undefined) payload[key] = body[key];
+    const payload = buildGrokImagePayload(model, body);
     const token = await getGrokMediaToken(credentials);
     const timeout = AbortSignal.timeout(120000);
     const response = await fetch(providerConfig.baseUrl, {
@@ -136,40 +141,46 @@ export async function handleGrokImageGeneration({
 
 const speechCodecs = new Set(["mp3", "wav", "pcm", "mulaw", "alaw"]);
 
+function validateGrokSpeechSpeed(speed: unknown) {
+  if (
+    speed !== undefined &&
+    (typeof speed !== "number" || !Number.isFinite(speed) || speed < 0.7 || speed > 1.5)
+  )
+    throw requestError("Grok speech speed must be between 0.7 and 1.5");
+}
+
+function buildGrokSpeechPayload(body: Record<string, unknown>) {
+  const nativeFormat =
+    body.output_format &&
+    typeof body.output_format === "object" &&
+    !Array.isArray(body.output_format)
+      ? (body.output_format as Record<string, unknown>)
+      : {};
+  const codec = body.response_format ?? nativeFormat.codec ?? "mp3";
+  if (typeof codec !== "string" || !speechCodecs.has(codec))
+    throw requestError("Grok speech supports mp3, wav, pcm, mulaw, or alaw");
+  validateGrokSpeechSpeed(body.speed);
+  return {
+    text: body.input,
+    voice_id: body.voice_id ?? body.voice ?? "eve",
+    language: body.language ?? "auto",
+    output_format: { ...nativeFormat, codec },
+    ...(body.speed !== undefined ? { speed: body.speed } : {}),
+  };
+}
+
 export async function handleGrokSpeech(
   providerConfig: GrokProvider,
   body: Record<string, unknown>,
   credentials?: GrokCredentials | null
 ): Promise<Response> {
   try {
-    const nativeFormat =
-      body.output_format &&
-      typeof body.output_format === "object" &&
-      !Array.isArray(body.output_format)
-        ? (body.output_format as Record<string, unknown>)
-        : {};
-    const codec = body.response_format ?? nativeFormat.codec ?? "mp3";
-    if (typeof codec !== "string" || !speechCodecs.has(codec))
-      throw requestError("Grok speech supports mp3, wav, pcm, mulaw, or alaw");
-    if (
-      body.speed !== undefined &&
-      (typeof body.speed !== "number" ||
-        !Number.isFinite(body.speed) ||
-        body.speed < 0.7 ||
-        body.speed > 1.5)
-    )
-      throw requestError("Grok speech speed must be between 0.7 and 1.5");
+    const payload = buildGrokSpeechPayload(body);
     const token = await getGrokMediaToken(credentials);
     const response = await fetch(providerConfig.baseUrl, {
       method: "POST",
       headers: { ...grokMediaHeaders(token), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: body.input,
-        voice_id: body.voice_id ?? body.voice ?? "eve",
-        language: body.language ?? "auto",
-        output_format: { ...nativeFormat, codec },
-        ...(body.speed !== undefined ? { speed: body.speed } : {}),
-      }),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(120000),
       redirect: "error",
     });
