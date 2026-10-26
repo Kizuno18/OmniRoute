@@ -5,6 +5,7 @@ import { CORS_HEADERS } from "../utils/cors.ts";
 import { errorResponse, sanitizeErrorMessage } from "../utils/error.ts";
 import { checkAndRefreshToken } from "@/sse/services/tokenRefresh";
 import { saveImageSuccessResult, saveImageErrorResult } from "./imageResult.ts";
+import { buildXaiImageRequest } from "./imageGeneration/providers/xaiImage.ts";
 
 type GrokCredentials = {
   accessToken?: string;
@@ -64,30 +65,12 @@ async function requireSuccess(response: Response): Promise<void> {
   throw requestError(sanitizeErrorMessage(String(message)), response.status);
 }
 
+// Same request contract as the xAI Images API route (#15423: aspect_ratio/resolution/quality,
+// Zod-validated); the Grok Build proxy only changes the host, headers and token source.
 function buildGrokImagePayload(model: string, body: Record<string, unknown>) {
-  const count = body.n ?? 1;
-  const format = body.response_format ?? "url";
-  if (!Number.isInteger(count) || Number(count) < 1 || Number(count) > 10)
-    throw requestError("n must be an integer between 1 and 10");
-  if (format !== "url" && format !== "b64_json")
-    throw requestError("Grok images support url or b64_json response_format");
-  const payload: Record<string, unknown> = {
-    model,
-    prompt: body.prompt,
-    n: count,
-    response_format: format,
-  };
-  if (body.size !== undefined) {
-    if (body.size !== "1024x1024" && body.size !== "2048x2048")
-      throw requestError(
-        "Use 1024x1024, 2048x2048, or native aspect_ratio and resolution for Grok images"
-      );
-    payload.aspect_ratio = "1:1";
-    payload.resolution = body.size === "2048x2048" ? "2k" : "1k";
-  }
-  for (const key of ["aspect_ratio", "resolution"])
-    if (body[key] !== undefined) payload[key] = body[key];
-  return payload;
+  const built = buildXaiImageRequest(model, body);
+  if (built.success === false) throw requestError(built.error);
+  return { n: 1, response_format: "url", ...built.body };
 }
 
 export async function handleGrokImageGeneration({

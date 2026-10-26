@@ -6,12 +6,12 @@ developer API key is required. Availability and billing depend on the account's
 entitlements and upstream settings. This adapter does not imply free usage or
 change the account's on-demand spending cap.
 
-| Gateway endpoint           | Model                                |
-| -------------------------- | ------------------------------------ |
-| `/v1/images/generations`   | `grok-cli/grok-imagine-image`        |
-| `/v1/videos/generations`   | `grok-cli/grok-imagine-video`        |
-| `/v1/audio/speech`         | `grok-cli/grok-tts`                  |
-| `/v1/audio/transcriptions` | `grok-cli/grok-voice-transcribe-2.0` |
+| Gateway endpoint           | Model                                             |
+| -------------------------- | ------------------------------------------------- |
+| `/v1/images/generations`   | `grok-cli/grok-imagine-image` (opt-in, see below) |
+| `/v1/videos/generations`   | `grok-cli/grok-imagine-video`                     |
+| `/v1/audio/speech`         | `grok-cli/grok-tts`                               |
+| `/v1/audio/transcriptions` | `grok-cli/grok-voice-transcribe-2.0`              |
 
 The short prefix `gc/` also works. Always include the OAuth prefix: bare Imagine
 model IDs still resolve to the separate `xai` API-key provider for compatibility.
@@ -33,9 +33,13 @@ OmniRoute authentication:
 }
 ```
 
-Images support `url` and `b64_json`. Square sizes `1024x1024` and `2048x2048`
-map to native `aspect_ratio: "1:1"` and `resolution: "1k"` or `"2k"`.
-Alternatively, send the native `aspect_ratio` and `resolution` directly.
+Images are opt-in: `grok-cli` / `gc` is an image provider only while
+`GROK_SUBSCRIPTION_IMAGES_ENABLED` is `true` (default `false`), the same switch as the
+other Grok subscription image routes in [Grok Image Generation](../guides/GROK_IMAGES.md).
+With the flag on, the request body follows that guide (native `aspect_ratio` /
+`resolution`, OpenAI-style `size` mapping, `quality` on Image 2.0, `url` or `b64_json`);
+only the transport differs: the call goes to the Grok Build proxy with the CLI
+token-auth header instead of the public xAI endpoint.
 
 ```json
 {

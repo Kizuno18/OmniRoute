@@ -6,8 +6,18 @@ import { join } from "node:path";
 
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "omniroute-video-job-abort-"));
 
-const { handleVideoGeneration } = await import("../../open-sse/handlers/videoGeneration.ts");
+const { handleVideoGeneration, recordVideoJobCall } =
+  await import("../../open-sse/handlers/videoGeneration.ts");
 const { resetDbInstance } = await import("../../src/lib/db/core.ts");
+// Job presets record a call-log/usage row when they finish (recordVideoJobCall). Warm that
+// path (DB migrations + the lazily imported call-log modules) up front so the abort-latency
+// assertions measure the abort, not the first recording.
+await recordVideoJobCall({
+  provider: "warmup",
+  model: "warmup",
+  result: { success: false, status: 499, error: "warmup" },
+  durationMs: 0,
+});
 test.after(() => resetDbInstance());
 
 function jsonResponse(body: unknown, status = 200) {

@@ -328,7 +328,8 @@ export const IMAGE_PROVIDERS: Record<string, ImageProviderConfig> = {
   },
 
   xai: XAI_API_KEY_IMAGE_PROVIDER,
-  "grok-cli": GROK_BUILD_IMAGE_PROVIDER,
+  // grok-cli (Grok Build OAuth) images stay opt-in: they live in
+  // XAI_SUBSCRIPTION_IMAGE_PROVIDERS and only appear with GROK_SUBSCRIPTION_IMAGES_ENABLED (#15423).
 
   "vercel-ai-gateway": {
     id: "vercel-ai-gateway",

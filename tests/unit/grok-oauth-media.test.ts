@@ -6,8 +6,12 @@ import { join } from "node:path";
 
 const testDataDir = mkdtempSync(join(tmpdir(), "omniroute-grok-media-"));
 process.env.DATA_DIR = testDataDir;
+// Grok Build OAuth images are opt-in (#15423): this suite exercises the enabled path; the
+// default-off path is pinned by grok-subscription-images-flag-off.test.ts.
+process.env.GROK_SUBSCRIPTION_IMAGES_ENABLED = "true";
 
-const { IMAGE_PROVIDERS, parseImageModel } = await import("../../open-sse/config/imageRegistry.ts");
+const { IMAGE_PROVIDERS, getImageProvider, parseImageModel } =
+  await import("../../open-sse/config/imageRegistry.ts");
 const { VIDEO_PROVIDERS, parseVideoModel } = await import("../../open-sse/config/videoRegistry.ts");
 const { XAI_SUBSCRIPTION_IMAGE_PROVIDERS } =
   await import("../../open-sse/config/imageRegistryData.ts");
@@ -63,12 +67,8 @@ test("Grok CLI media prefixes use the existing OAuth pool and leave xai API-key 
       model: "grok-voice-transcribe-2.0",
     });
   }
-  for (const registry of [
-    IMAGE_PROVIDERS,
-    VIDEO_PROVIDERS,
-    AUDIO_SPEECH_PROVIDERS,
-    AUDIO_TRANSCRIPTION_PROVIDERS,
-  ]) {
+  assert.equal(getImageProvider("grok-cli")?.authType, "oauth");
+  for (const registry of [VIDEO_PROVIDERS, AUDIO_SPEECH_PROVIDERS, AUDIO_TRANSCRIPTION_PROVIDERS]) {
     assert.equal(registry["grok-cli"].authType, "oauth");
   }
   assert.equal(IMAGE_PROVIDERS.xai.authType, "apikey");
@@ -78,9 +78,11 @@ test("Grok CLI media prefixes use the existing OAuth pool and leave xai API-key 
 });
 
 test("the optional subscription image catalog keeps the Grok Build dispatch contract", () => {
-  const direct = IMAGE_PROVIDERS["grok-cli"];
+  // Not in the always-on catalog: only the flag-gated subscription catalog carries it.
+  assert.equal(IMAGE_PROVIDERS["grok-cli"], undefined);
+  const direct = getImageProvider("grok-cli");
   const optional = XAI_SUBSCRIPTION_IMAGE_PROVIDERS["grok-cli"];
-  assert.equal(direct.format, "grok-image");
+  assert.equal(direct?.format, "grok-image");
   assert.equal(optional.format, direct.format);
   assert.equal(optional.baseUrl, `${proxy}/images/generations`);
   assert.equal(optional.authType, "oauth");
@@ -147,7 +149,8 @@ test("Grok images reject invalid options before dispatch", async (t) => {
     { n: 11 },
     { n: 1.5 },
     { response_format: "jpeg" },
-    { size: "1792x1024" },
+    { size: "4096x4096" },
+    { resolution: "4k" },
   ]) {
     const result = await handleImageGeneration({
       body: { model: "gc/grok-imagine-image", prompt: "a cube", ...options },
