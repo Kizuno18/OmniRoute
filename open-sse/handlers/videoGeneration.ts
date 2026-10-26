@@ -14,6 +14,7 @@ import { handleGoogleFlowVideoGeneration } from "./videoGeneration/googleFlowHan
 import { handleDeepinfraVideoGeneration } from "./videoGeneration/deepinfraHandler.ts";
 import { handleLeonardoVideoGeneration } from "./videoGeneration/leonardoHandler.ts";
 import { handleDashscopeVideoGeneration } from "./videoGeneration/dashscopeHandler.ts";
+import { handleMinimaxVideoGeneration } from "./videoGeneration/minimaxHandler.ts";
 import { handleNovitaVideoGeneration } from "./videoGeneration/novitaHandler.ts";
 import { handleXaiVideoGeneration } from "./videoGeneration/xaiGrokImagineHandler.ts";
 import { handleSegmindVideoGeneration } from "./videoGeneration/providers/segmind.ts";
@@ -21,7 +22,11 @@ import { handleUcVideoGeneration } from "./videoGeneration/providers/ucVideo.ts"
 import { handleAdobeFireflyVideoGeneration } from "./videoGeneration/adobeFireflyHandler.ts";
 import { handleSyntxVideoGeneration } from "./videoGeneration/syntxHandler.ts";
 import { handleOpenAIVideoGeneration } from "./videoGeneration/openai.ts";
-import { getVideoJobPreset, handleVideoJobGeneration } from "./videoGeneration/job.ts";
+import {
+  getVideoJobPreset,
+  handleVideoJobGeneration,
+  type VideoJobCallRecord,
+} from "./videoGeneration/job.ts";
 import { abortedVideoResult } from "./videoGeneration/abort.ts";
 import { sleep } from "../utils/sleep.ts";
 import {
@@ -46,7 +51,7 @@ import {
   extractComfyOutputFiles,
   resolveComfyUiBaseUrl,
 } from "../utils/comfyuiClient.ts";
-import { saveCallLog } from "@/lib/usageDb";
+import { saveCallLog, saveRequestUsage } from "@/lib/usageDb";
 import { getAllCustomModels } from "@/lib/db/models";
 import { sanitizeErrorMessage } from "../utils/error.ts";
 import {
@@ -137,8 +142,43 @@ function resolveVideoJobPollingOverrides(body: Record<string, unknown>): {
 }
 
 /**
- * Handle video generation request
+ * Record a finished job-preset generation in both usage surfaces.
+ *
+ * The job pipeline previously wrote neither, so a job-preset provider was invisible in
+ * the request log and in the usage view while the synchronous video handlers appeared
+ * in both. `path`/`duration` are the names the call-log writer reads, and `endpoint` is
+ * what the usage row reports. Injected into `handleVideoJobGeneration` so the job
+ * module keeps no dependency on the usage DB.
  */
+export async function recordVideoJobCall({
+  provider,
+  model,
+  result,
+  durationMs,
+}: VideoJobCallRecord): Promise<void> {
+  const status = result.success ? 200 : (result.status ?? 502);
+  const error = result.success ? undefined : result.error;
+  await Promise.allSettled([
+    saveCallLog({
+      method: "POST",
+      path: "/v1/videos/generations",
+      status,
+      model: `${provider}/${model}`,
+      provider,
+      duration: durationMs,
+      ...(error ? { error } : {}),
+    }),
+    saveRequestUsage({
+      provider,
+      model,
+      endpoint: "video",
+      status: String(status),
+      success: result.success,
+      latencyMs: durationMs,
+      ...(error ? { errorCode: error.slice(0, 200) } : {}),
+    }),
+  ]);
+}
 
 /**
  * Handle video generation request
@@ -148,7 +188,9 @@ export async function handleVideoGeneration({
   credentials,
   log,
   resolvedProvider = null,
-  signal = null as AbortSignal | null,
+  // #16372 — route-injected media sink (owner + public origin) for auth-gated job results.
+  mediaSink = undefined,
+  signal = null,
 }) {
   if (signal?.aborted) return abortedVideoResult();
   let { provider, model } = parseVideoModel(body.model);
@@ -197,6 +239,9 @@ export async function handleVideoGeneration({
         body,
         credentials,
         log,
+        mediaSink,
+        provider,
+        recordCall: recordVideoJobCall,
         signal,
         ...resolveVideoJobPollingOverrides(body),
       });
@@ -237,6 +282,9 @@ export async function handleVideoGeneration({
       body,
       credentials,
       log,
+      mediaSink,
+      provider,
+      recordCall: recordVideoJobCall,
       signal,
       ...resolveVideoJobPollingOverrides(body),
     });
@@ -340,6 +388,17 @@ export async function handleVideoGeneration({
     });
   }
 
+  if (providerConfig.format === "minimax-video") {
+    return handleMinimaxVideoGeneration({
+      model,
+      provider,
+      providerConfig,
+      body,
+      credentials,
+      log,
+    });
+  }
+
   if (providerConfig.format === "segmind") {
     return handleSegmindVideoGeneration({
       model,
@@ -396,6 +455,7 @@ export async function handleVideoGeneration({
       body,
       credentials,
       log,
+      signal,
     });
   }
   if (resolvedProvider) {

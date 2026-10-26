@@ -28,6 +28,7 @@ import {
 } from "@/shared/network/outboundUrlGuardPolicy";
 import { errorResponse, sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
 import { getStaticQoderModels } from "@omniroute/open-sse/services/qoderCli.ts";
+import { getCodexDiscoveryMode } from "@/shared/services/codexDiscoveryPolicy";
 import { deriveConfigFromRegistryModelsUrl } from "./discoveryConfig";
 import {
   buildTokenPlanCatalogRequest,
@@ -138,10 +139,10 @@ import {
   enrichCodexModelsFromGithubCatalog,
   fetchCodexDiscoveryModels,
   fetchCodexGithubCatalogModels,
-  reconcileCodexDiscoveryCatalog,
 } from "./discovery/codex";
-import { getCodexDiscoveryMode } from "@/shared/services/codexDiscoveryPolicy";
+import { createCodexDiscoveryFetch, createCodexCatalogReconciler } from "./discovery/codexRoute";
 import { fetchClaudeDiscoveryModels } from "./discovery/claude";
+import { applyConnectionCustomHeaders } from "./discovery/connectionCustomHeaders";
 import { maybeHandleConolOrSyntxModelDiscovery } from "./webSessionDiscovery";
 import { maybeHandleTwinmindModelDiscovery } from "./twinmindDiscovery";
 import { maybeHandleVertexModelDiscovery } from "./vertexDiscovery";
@@ -255,7 +256,9 @@ export async function GET(
         payload.models = filterModelsForRoute(provider, payload.models, chatOnly);
       }
       if (excludeHidden && payload.models && Array.isArray(payload.models)) {
-        payload.models = payload.models.filter((m: any) => !getModelIsHidden(provider, m.id));
+        payload.models = payload.models.filter(
+          (m: any) => m.visibility !== "hide" && !getModelIsHidden(provider, m.id)
+        );
       }
       return NextResponse.json(payload, statusConfig);
     };
@@ -303,16 +306,24 @@ export async function GET(
       );
     };
 
-    const buildCachedDiscoveryResponse = (warning?: string) =>
+    const buildCachedDiscoveryResponse = (
+      warning?: string,
+      extraPayload: Record<string, unknown> = {}
+    ) =>
       buildResponse({
         provider,
         connectionId,
         models: cachedDiscoveryModels,
         source: "cache",
         ...(warning ? { warning } : {}),
+        ...extraPayload,
       });
 
-    const buildLocalCatalogResponse = (warning?: string, intentional = false) => {
+    const buildLocalCatalogResponse = (
+      warning?: string,
+      intentional = false,
+      extraPayload: Record<string, unknown> = {}
+    ) => {
       const localModels = toLocalCatalogModels();
       if (localModels.length === 0) return null;
       return buildResponse({
@@ -325,6 +336,7 @@ export async function GET(
         // of treating them as a degraded remote-fetch failure (502).
         ...(intentional ? { intentional: true } : {}),
         ...(warning ? { warning } : {}),
+        ...extraPayload,
       });
     };
 
@@ -332,15 +344,17 @@ export async function GET(
       cacheWarning = "API unavailable — using cached catalog",
       localWarning = "API unavailable — using local catalog",
       localIntentional = false,
+      extraPayload = {},
     }: {
       cacheWarning?: string;
       localWarning?: string;
       localIntentional?: boolean;
+      extraPayload?: Record<string, unknown>;
     } = {}) => {
       if (cachedDiscoveryModels.length > 0) {
-        return buildCachedDiscoveryResponse(cacheWarning);
+        return buildCachedDiscoveryResponse(cacheWarning, extraPayload);
       }
-      return buildLocalCatalogResponse(localWarning, localIntentional);
+      return buildLocalCatalogResponse(localWarning, localIntentional, extraPayload);
     };
 
     const buildDiscoveryErrorFallbackResponse = (
@@ -1341,6 +1355,7 @@ export async function GET(
         const models = await fetchClaudeDiscoveryModels({
           accessToken,
           apiKey,
+          providerSpecificData: connection.providerSpecificData,
           fetchImpl: (url, init) =>
             safeOutboundFetch(url, {
               ...SAFE_OUTBOUND_FETCH_PRESETS.modelsDiscovery,
@@ -1737,6 +1752,7 @@ export async function GET(
       const fallback = buildDiscoveryFallbackResponse({
         cacheWarning: "Copilot models API unavailable — using cached catalog",
         localWarning: "Copilot models API unavailable — using local catalog",
+        extraPayload: discovery.failure ? { discoveryFailure: discovery.failure } : {},
       });
       if (fallback) return fallback;
       return buildResponse({
@@ -1745,6 +1761,7 @@ export async function GET(
         models: discovery.models,
         source: "local_catalog",
         warning: "Copilot models API unavailable — using local catalog",
+        ...(discovery.failure ? { discoveryFailure: discovery.failure } : {}),
       });
     }
 
@@ -1919,12 +1936,15 @@ export async function GET(
           guard: getProviderOutboundGuard(),
           proxyConfig: proxy,
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(apiKey ? { "x-api-key": apiKey } : {}),
-            "anthropic-version": "2023-06-01",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
+          headers: applyConnectionCustomHeaders(
+            {
+              "Content-Type": "application/json",
+              ...(apiKey ? { "x-api-key": apiKey } : {}),
+              "anthropic-version": "2023-06-01",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            psd
+          ),
         });
       } catch (error) {
         const fallback = buildDiscoveryErrorFallbackResponse(error);
@@ -2050,34 +2070,28 @@ export async function GET(
         getModelsByProviderId("codex") || [],
         getStaticModelsForProvider("codex") || []
       );
-      const reconcileCodexCatalog = (
-        remoteModels: typeof cachedDiscoveryModels,
-        source: "live" | "github" = "live"
-      ) =>
-        reconcileCodexDiscoveryCatalog(
-          remoteModels.map((model) => ({ ...model, discoverySource: source })),
-          staticCodexCatalog,
-          codexDiscoveryMode
-        );
-      const finalizeCodexCatalog = (remoteModels: typeof cachedDiscoveryModels) =>
-        reconcileCodexCatalog(remoteModels).activeModels;
-      const cachedCatalogModels = finalizeCodexCatalog(cachedDiscoveryModels);
-      const cachedIdsMatchFinalCatalog =
-        cachedDiscoveryModels.length === cachedCatalogModels.length &&
-        cachedDiscoveryModels.every((model, index) => model.id === cachedCatalogModels[index]?.id);
-      const persistFilteredCacheIfNeeded = async () => {
-        if (cachedIdsMatchFinalCatalog) return;
-        await persistDiscoveredModels(provider, connectionId, cachedCatalogModels);
+      const reconcileCodexCatalog = createCodexCatalogReconciler(
+        staticCodexCatalog,
+        codexDiscoveryMode
+      );
+      const persistFilteredCacheIfNeeded = async (models: readonly { id: string }[]) => {
+        if (
+          cachedDiscoveryModels.length === models.length &&
+          cachedDiscoveryModels.every((model, index) => model.id === models[index]?.id)
+        )
+          return;
+        await persistDiscoveredModels(provider, connectionId, models);
       };
 
       if (!refresh && cachedDiscoveryModels.length > 0) {
-        await persistFilteredCacheIfNeeded();
         const catalog = reconcileCodexCatalog(cachedDiscoveryModels);
+        await persistFilteredCacheIfNeeded(catalog.activeModels);
         return buildResponse({
           provider,
           connectionId,
           models: catalog.activeModels,
           source: "cache",
+          warning: catalog.warning,
           discovery: { mode: codexDiscoveryMode },
           ...(includeCandidates ? { candidateModels: catalog.candidateModels } : {}),
         });
@@ -2096,22 +2110,10 @@ export async function GET(
       const liveModels = await fetchCodexDiscoveryModels({
         accessToken: accessToken || null,
         providerSpecificData: connection.providerSpecificData,
-        fetchImpl: (url, init) =>
-          safeOutboundFetch(url, {
-            ...SAFE_OUTBOUND_FETCH_PRESETS.modelsDiscovery,
-            guard: getProviderOutboundGuard(),
-            proxyConfig: proxy,
-            ...init,
-          }),
+        fetchImpl: createCodexDiscoveryFetch(proxy, getProviderOutboundGuard()),
       });
       const githubCatalogModels = await fetchCodexGithubCatalogModels({
-        fetchImpl: (url, init) =>
-          safeOutboundFetch(url, {
-            ...SAFE_OUTBOUND_FETCH_PRESETS.modelsDiscovery,
-            guard: "public-only",
-            proxyConfig: proxy,
-            ...init,
-          }),
+        fetchImpl: createCodexDiscoveryFetch(proxy, "public-only"),
       });
       if (liveModels && liveModels.length > 0) {
         const enrichedLiveModels =
@@ -2125,29 +2127,67 @@ export async function GET(
           connectionId,
           models: catalog.activeModels,
           source: "api",
+          warning: catalog.warning,
           discovery: { mode: codexDiscoveryMode },
           ...(includeCandidates ? { candidateModels: catalog.candidateModels } : {}),
         });
       }
 
-      if (cachedDiscoveryModels.length > 0) {
-        await persistFilteredCacheIfNeeded();
+      // One fallback chain covers both an empty catalog and a failed call:
+      // cached account view, then the public manifest, then the local catalog.
+      // An empty answer may be transient, so it never clears the cached catalog;
+      // the warning says which situation it was and which fallback answered.
+      const liveFailed = liveModels === null;
+      const liveEmpty = liveModels !== null && liveModels.length === 0;
+      const hasGithubCatalog = Boolean(githubCatalogModels && githubCatalogModels.length > 0);
+      const fallbackSource: "github_catalog" | "cache" | "local_catalog" =
+        cachedDiscoveryModels.length > 0
+          ? "cache"
+          : hasGithubCatalog
+            ? "github_catalog"
+            : "local_catalog";
+      const liveFailureWarning: Record<typeof fallbackSource, string> = {
+        cache: "Codex live catalog unavailable — using cached catalog",
+        github_catalog: "Codex live catalog unavailable — using GitHub model catalog",
+        local_catalog: "Codex live and GitHub catalogs unavailable — using local catalog",
+      };
+      // An empty catalog still falls back, and still says so: model-sync's
+      // isDegraded* gates key off `source` plus a non-empty `warning`, so a
+      // silent fallback would let the public manifest persist as the account's
+      // synced catalog (spec 3.7). The wording separates two situations that
+      // used to share one string: "upstream did not answer" versus "upstream
+      // answered with nothing to discover".
+      const emptyCatalogWarning: Record<typeof fallbackSource, string> = {
+        cache: "Codex returned no models — using the cached catalog",
+        github_catalog: "Codex returned no models — using the public catalog",
+        local_catalog: "Codex returned no models — using the local catalog",
+      };
+      const fallbackWarning = liveFailed
+        ? liveFailureWarning[fallbackSource]
+        : liveEmpty
+          ? emptyCatalogWarning[fallbackSource]
+          : undefined;
+
+      if (fallbackSource === "cache") {
+        const catalog = reconcileCodexCatalog(cachedDiscoveryModels, "live", fallbackWarning);
+        await persistFilteredCacheIfNeeded(catalog.activeModels);
         return buildResponse({
           provider,
           connectionId,
-          models: cachedCatalogModels,
+          models: catalog.activeModels,
           source: "cache",
-          warning: "Codex live catalog unavailable — using cached catalog",
+          warning: catalog.warning,
         });
       }
-      if (githubCatalogModels && githubCatalogModels.length > 0) {
-        const catalog = reconcileCodexCatalog(githubCatalogModels, "github");
+
+      if (fallbackSource === "github_catalog" && githubCatalogModels) {
+        const catalog = reconcileCodexCatalog(githubCatalogModels, "github", fallbackWarning);
         return buildResponse({
           provider,
           connectionId,
           models: catalog.activeModels,
           source: "github_catalog",
-          warning: "Codex live catalog unavailable — using GitHub model catalog",
+          warning: catalog.warning,
           discovery: { mode: codexDiscoveryMode },
           ...(includeCandidates ? { candidateModels: catalog.candidateModels } : {}),
         });
@@ -2159,7 +2199,7 @@ export async function GET(
         models: buildCodexLocalFallbackCatalog(staticCodexCatalog),
         source: "local_catalog",
         intentional: true,
-        warning: "Codex live and GitHub catalogs unavailable — using local catalog",
+        warning: fallbackWarning,
       });
     }
 
@@ -2174,7 +2214,7 @@ export async function GET(
         // web-cookie providers like voyage-ai, jina-ai, t3-web) are
         // intentionally local-catalog-only; model-sync imports rather than 502s.
         intentional: true,
-        warning: "API unavailable — using local catalog",
+        warning: "Model discovery is not configured for this provider — using local catalog",
       });
     }
     if (!config) {

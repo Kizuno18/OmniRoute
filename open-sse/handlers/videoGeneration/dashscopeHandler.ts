@@ -5,6 +5,10 @@ import { sanitizeErrorMessage } from "../../utils/error.ts";
 import { sleep } from "../../utils/sleep.ts";
 import { abortedVideoResult } from "./abort.ts";
 
+// Shared with the DashScope TTS executor so the engine keeps a single import of this app
+// module (open-sse → src boundary ratchet).
+export { resolveAlibabaProviderMediaBaseUrl };
+
 /**
  * Alibaba-family video generation: create async task → poll → MP4.
  *
