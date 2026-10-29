@@ -118,6 +118,11 @@ async function readBoundedJson(
     signal?.removeEventListener("abort", cancel);
     reader.releaseLock();
   }
+  return parseJsonOrEmpty(chunks);
+}
+
+/** The JSON body assembled from `chunks`, or `{}` when it is empty, `null` or malformed. */
+function parseJsonOrEmpty(chunks: Uint8Array[]): XaiJobBody {
   try {
     return JSON.parse(Buffer.concat(chunks).toString("utf8")) ?? {};
   } catch {
@@ -228,36 +233,64 @@ async function pollXaiVideoJob({
     if (signal?.aborted) return { terminal: "aborted" };
     if (Date.now() >= deadline) break;
     polls++;
-    const fetchSignal = xaiFetchSignal(deadline, signal);
-    const pollRes = await fetch(`${statusUrl}/${requestId}`, {
-      headers: { Authorization: `Bearer ${token}`, ...headers },
-      signal: fetchSignal,
-      redirect: "error",
+    const step = await fetchXaiJobStatus({
+      statusUrl,
+      requestId,
+      token,
+      deadline,
+      headers,
+      signal,
     });
-    const pollData = await readBoundedJson(pollRes, fetchSignal);
-    if (signal?.aborted) return { terminal: "aborted" };
-    fetchSignal.throwIfAborted();
-    if (pollData === RESPONSE_TOO_LARGE) {
-      return {
-        terminal: "error",
-        status: 502,
-        error: `xAI video job ${requestId} poll response exceeded ${MAX_RESPONSE_BYTES} bytes`,
-      };
-    }
-    if (!pollRes.ok) {
-      return {
-        terminal: "error",
-        status: pollRes.status,
-        error: xaiVideoErrorMessage(pollData, `xAI video job ${requestId} polling failed`),
-      };
-    }
-    lastStatus = pollData?.status || "pending";
-
-    if (lastStatus === "done") return { terminal: "done", videoUrl: pollData?.video?.url };
-    if (lastStatus === "failed") return { terminal: "failed", error: pollData?.error };
+    if ("terminal" in step) return step;
     // pending / processing → keep polling
+    lastStatus = step.pending;
   }
   return { terminal: "timeout", lastStatus, polls, maxPolls };
+}
+
+/** One status request: a terminal outcome, or the non-terminal upstream status to keep polling on. */
+async function fetchXaiJobStatus({
+  statusUrl,
+  requestId,
+  token,
+  deadline,
+  headers,
+  signal,
+}: {
+  statusUrl: string;
+  requestId: string;
+  token: string;
+  deadline: number;
+  headers: Record<string, string>;
+  signal?: AbortSignal | null;
+}): Promise<XaiPollOutcome | { pending: string }> {
+  const fetchSignal = xaiFetchSignal(deadline, signal);
+  const pollRes = await fetch(`${statusUrl}/${requestId}`, {
+    headers: { Authorization: `Bearer ${token}`, ...headers },
+    signal: fetchSignal,
+    redirect: "error",
+  });
+  const pollData = await readBoundedJson(pollRes, fetchSignal);
+  if (signal?.aborted) return { terminal: "aborted" };
+  fetchSignal.throwIfAborted();
+  if (pollData === RESPONSE_TOO_LARGE) {
+    return {
+      terminal: "error",
+      status: 502,
+      error: `xAI video job ${requestId} poll response exceeded ${MAX_RESPONSE_BYTES} bytes`,
+    };
+  }
+  if (!pollRes.ok) {
+    return {
+      terminal: "error",
+      status: pollRes.status,
+      error: xaiVideoErrorMessage(pollData, `xAI video job ${requestId} polling failed`),
+    };
+  }
+  const status = pollData?.status || "pending";
+  if (status === "done") return { terminal: "done", videoUrl: pollData?.video?.url };
+  if (status === "failed") return { terminal: "failed", error: pollData?.error };
+  return { pending: status };
 }
 
 /** A client-supplied numeric knob: the default when absent, null when out of range. */
@@ -386,27 +419,8 @@ export async function handleXaiVideoGeneration({
   const { timeoutMs, pollIntervalMs, clientMaxPolls, maxPolls, token, baseUrl, statusUrl, prompt } =
     resolveXaiVideoOptions(body, providerConfig, credentials);
 
-  if (timeoutMs === null) {
-    return {
-      success: false,
-      status: 400,
-      error: `timeout_ms must be a positive number of milliseconds up to ${MAX_TIMEOUT_MS}`,
-    };
-  }
-  if (pollIntervalMs === null) {
-    return {
-      success: false,
-      status: 400,
-      error: `poll_interval_ms must be between ${MIN_POLL_INTERVAL_MS} and ${MAX_TIMEOUT_MS}`,
-    };
-  }
-  if (clientMaxPolls === null) {
-    return {
-      success: false,
-      status: 400,
-      error: `max_polls must be a number of polls between 1 and ${MAX_POLLS}`,
-    };
-  }
+  const knobError = xaiVideoKnobError(timeoutMs, pollIntervalMs, clientMaxPolls);
+  if (knobError) return knobError;
 
   if (!token) {
     return { success: false, status: 401, error: "xAI API key is required" };
@@ -418,8 +432,7 @@ export async function handleXaiVideoGeneration({
 
   // Cancellation stops local polling; the provider owns the remote job lifetime.
   try {
-    const requestToken = provider === "grok-cli" ? await getGrokMediaToken(credentials) : token;
-    const headers = provider === "grok-cli" ? grokMediaHeaders(requestToken) : {};
+    const { requestToken, headers } = await resolveXaiRequestAuth(provider, credentials, token);
     signal?.throwIfAborted();
     const created = await createXaiVideoJob({
       baseUrl,
@@ -457,22 +470,55 @@ export async function handleXaiVideoGeneration({
       if (log) log.info("VIDEO", `${provider}/${model} (xai-video) | client aborted`);
       return { success: false, status: 499, error: "Request aborted" };
     }
-    if (err instanceof Error && err.name === "TimeoutError") {
-      return {
-        success: false,
-        status: 504,
-        error: "xAI video operation deadline exceeded; the job was not resubmitted",
-      };
-    }
+    return xaiVideoFailureResult(err);
+  }
+}
+
+/** The 400 result for the first out-of-range client polling knob, or null when all are valid. */
+function xaiVideoKnobError(
+  timeoutMs: number | null,
+  pollIntervalMs: number | null,
+  clientMaxPolls: number | null
+) {
+  const message =
+    timeoutMs === null
+      ? `timeout_ms must be a positive number of milliseconds up to ${MAX_TIMEOUT_MS}`
+      : pollIntervalMs === null
+        ? `poll_interval_ms must be between ${MIN_POLL_INTERVAL_MS} and ${MAX_TIMEOUT_MS}`
+        : clientMaxPolls === null
+          ? `max_polls must be a number of polls between 1 and ${MAX_POLLS}`
+          : null;
+  return message === null ? null : { success: false, status: 400, error: message };
+}
+
+/** Grok Build (`grok-cli`) swaps in its refreshed CLI token and media headers; xAI keys pass through. */
+async function resolveXaiRequestAuth(
+  provider: string,
+  credentials: { apiKey?: string; accessToken?: string } | null | undefined,
+  token: string
+): Promise<{ requestToken: string; headers: Record<string, string> }> {
+  if (provider !== "grok-cli") return { requestToken: token, headers: {} };
+  const requestToken = await getGrokMediaToken(credentials);
+  return { requestToken, headers: grokMediaHeaders(requestToken) };
+}
+
+/** A thrown (non-abort) create/poll error as a video result: 504 on deadline, else upstream or 502. */
+function xaiVideoFailureResult(err: unknown) {
+  if (err instanceof Error && err.name === "TimeoutError") {
     return {
       success: false,
-      status:
-        err instanceof Error && ["TimeoutError", "AbortError"].includes(err.name)
-          ? 504
-          : isJsonObject(err) && Number.isFinite(Number(err.status))
-            ? Number(err.status)
-            : 502,
-      error: sanitizeErrorMessage(err) || "Video provider error",
+      status: 504,
+      error: "xAI video operation deadline exceeded; the job was not resubmitted",
     };
   }
+  return {
+    success: false,
+    status:
+      err instanceof Error && ["TimeoutError", "AbortError"].includes(err.name)
+        ? 504
+        : isJsonObject(err) && Number.isFinite(Number(err.status))
+          ? Number(err.status)
+          : 502,
+    error: sanitizeErrorMessage(err) || "Video provider error",
+  };
 }

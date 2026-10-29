@@ -68,8 +68,7 @@ export async function executeVideoCombo(
   // Every target gets the client's signal, so a disconnect stops each
   // target's local polling exactly like the single-provider route.
   const signal = auth.request.signal;
-  const abortedResponse = () => errorResponse(499, "Request aborted");
-  if (signal.aborted) return abortedResponse();
+  if (signal.aborted) return errorResponse(499, "Request aborted");
 
   const combo = await getComboByName(comboName);
   if (!combo) {
@@ -318,12 +317,19 @@ export async function executeVideoCombo(
     });
   }
 
-  if (signal.aborted) return abortedResponse();
+  return allVideoTargetsFailedResponse(signal, terminalError ?? lastError);
+}
 
-  // All targets failed — prefer the terminal (400/401/403) error when one
-  // exists; it is the actionable misconfiguration signal. Fall back to the
-  // last failure otherwise.
-  const reportedError = terminalError ?? lastError;
+/**
+ * The combo response once no target succeeded: 499 when the client disconnected,
+ * otherwise the terminal (400/401/403) error when one exists — the actionable
+ * misconfiguration signal — falling back to the last failure.
+ */
+function allVideoTargetsFailedResponse(
+  signal: AbortSignal,
+  reportedError: { status: number; error: string } | null
+): Response {
+  if (signal.aborted) return errorResponse(499, "Request aborted");
   const errorPayload = toJsonErrorPayload(
     reportedError?.error || "All combo targets failed",
     "Video combo targets all failed"

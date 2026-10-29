@@ -694,10 +694,7 @@ async function fetchJson(
     raw?: boolean;
     signal?: AbortSignal | null;
   }
-): Promise<
-  | { ok: true; data?: unknown; base64?: string }
-  | { ok: false; status: number; error: string; retryAfterMs?: number }
-> {
+): Promise<FetchJsonResult> {
   try {
     const response = await fetchWithTimeout(url, {
       method,
@@ -707,40 +704,63 @@ async function fetchJson(
       // A per-call derived signal: fetchWithTimeout never removes its abort listener.
       ...(signal ? { signal: AbortSignal.any([signal]) } : {}),
     });
-    if (!response.ok) {
-      const errorText = await response.text();
-      log?.error?.("VIDEO", `Upstream ${response.status} for ${url}: ${errorText.slice(0, 200)}`);
-      return {
-        ok: false,
-        status: response.status,
-        error: errorText,
-        retryAfterMs: parseRetryAfterMs(response.headers.get("retry-after")),
-      };
-    }
-    if (raw) {
-      const buffer = Buffer.from(await response.arrayBuffer());
-      if (buffer.length === 0) {
-        return { ok: false, status: 502, error: `Empty media body from ${url}` };
-      }
-      return { ok: true, base64: buffer.toString("base64") };
-    }
-    const data = await response.json();
-    return { ok: true, data };
+    return await readFetchJsonResponse(response, url, log, raw);
   } catch (err: unknown) {
-    if (signal?.aborted) return { ok: false, status: 499, error: "Request aborted" };
-    const message = err instanceof Error ? err.message : String(err);
-    const isTimeout =
-      err instanceof FetchTimeoutError || (err instanceof Error && err.name === "AbortError");
-    log?.error?.(
-      "VIDEO",
-      `${isTimeout ? "Timeout" : "Request error"} for ${url}: ${sanitizeErrorMessage(message)}`
-    );
+    return fetchJsonErrorResult(err, url, log, signal);
+  }
+}
+
+type FetchJsonResult =
+  | { ok: true; data?: unknown; base64?: string }
+  | { ok: false; status: number; error: string; retryAfterMs?: number };
+
+async function readFetchJsonResponse(
+  response: Response,
+  url: string,
+  log: LogLike | undefined,
+  raw: boolean | undefined
+): Promise<FetchJsonResult> {
+  if (!response.ok) {
+    const errorText = await response.text();
+    log?.error?.("VIDEO", `Upstream ${response.status} for ${url}: ${errorText.slice(0, 200)}`);
     return {
       ok: false,
-      status: isTimeout ? 504 : 502,
-      error: `Video provider error: ${sanitizeErrorMessage(message)}`,
+      status: response.status,
+      error: errorText,
+      retryAfterMs: parseRetryAfterMs(response.headers.get("retry-after")),
     };
   }
+  if (raw) {
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length === 0) {
+      return { ok: false, status: 502, error: `Empty media body from ${url}` };
+    }
+    return { ok: true, base64: buffer.toString("base64") };
+  }
+  const data = await response.json();
+  return { ok: true, data };
+}
+
+/** Maps a thrown fetch error to a result: 499 on caller abort, 504 on timeout, else 502. */
+function fetchJsonErrorResult(
+  err: unknown,
+  url: string,
+  log: LogLike | undefined,
+  signal: AbortSignal | null | undefined
+): FetchJsonResult {
+  if (signal?.aborted) return { ok: false, status: 499, error: "Request aborted" };
+  const message = err instanceof Error ? err.message : String(err);
+  const isTimeout =
+    err instanceof FetchTimeoutError || (err instanceof Error && err.name === "AbortError");
+  log?.error?.(
+    "VIDEO",
+    `${isTimeout ? "Timeout" : "Request error"} for ${url}: ${sanitizeErrorMessage(message)}`
+  );
+  return {
+    ok: false,
+    status: isTimeout ? 504 : 502,
+    error: `Video provider error: ${sanitizeErrorMessage(message)}`,
+  };
 }
 
 const NON_VIDEO_EXTENSION = /\.(png|jpe?g|gif|webp|bmp|svg|ico)$/i;

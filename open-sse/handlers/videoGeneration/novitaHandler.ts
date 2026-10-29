@@ -163,13 +163,22 @@ export async function handleNovitaVideoGeneration({
       signal
     );
   } catch (err) {
-    if (signal?.aborted) return abortedVideoResult();
-    const e = (err ?? {}) as { message?: string; status?: number };
-    log?.error?.("VIDEO", `Novita video generation failed: ${e.message}`);
-    return {
-      success: false,
-      status: typeof e.status === "number" ? e.status : 502,
-      error: sanitizeErrorMessage(e.message || "Novita video generation failed"),
-    };
+    return novitaFailureResult(err, signal, log);
   }
+}
+
+/** A thrown submit/poll error as a result: 499 on caller abort, else the upstream status or 502. */
+function novitaFailureResult(
+  err: unknown,
+  signal: AbortSignal | null | undefined,
+  log: NovitaHandlerArgs["log"]
+): NovitaHandlerResult {
+  if (signal?.aborted) return abortedVideoResult();
+  const e = (err ?? {}) as { message?: string; status?: number };
+  log?.error?.("VIDEO", `Novita video generation failed: ${e.message}`);
+  return {
+    success: false,
+    status: typeof e.status === "number" ? e.status : 502,
+    error: sanitizeErrorMessage(e.message || "Novita video generation failed"),
+  };
 }

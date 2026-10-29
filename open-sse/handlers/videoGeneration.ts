@@ -27,7 +27,7 @@ import {
   handleVideoJobGeneration,
   type VideoJobCallRecord,
 } from "./videoGeneration/job.ts";
-import { abortedVideoResult } from "./videoGeneration/abort.ts";
+import { abortedVideoResult, POLL_ABORTED, pollJsonAfter } from "./videoGeneration/abort.ts";
 import { sleep } from "../utils/sleep.ts";
 import {
   extractRunwayFailureMessage,
@@ -1167,19 +1167,14 @@ async function handleHaiperVideoGeneration({
   const { job_id } = await res.json();
   const deadline = Date.now() + 300000;
   while (Date.now() < deadline) {
-    await sleep(5000, signal);
-    if (signal?.aborted) return abortedVideoResult();
-    let status;
-    try {
-      const statusRes = await fetch(`${providerConfig.statusUrl}/${job_id}`, {
-        headers: { HAIPER_KEY: token },
-        ...(signal ? { signal } : {}),
-      });
-      status = await statusRes.json();
-    } catch (err) {
-      if (signal?.aborted) return abortedVideoResult();
-      throw err;
-    }
+    const status = await pollJsonAfter(
+      5000,
+
+      `${providerConfig.statusUrl}/${job_id}`,
+      { HAIPER_KEY: token },
+      signal
+    );
+    if (status === POLL_ABORTED) return abortedVideoResult();
     if (status.status === "completed" || status.status === "succeeded") {
       const videoUrl = status.creation_url || status.output?.video_url;
       if (videoUrl) {
