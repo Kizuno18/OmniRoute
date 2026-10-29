@@ -133,6 +133,31 @@ test("handleVideoGeneration preserves an xAI authentication rejection without re
   }
 });
 
+test("handleVideoGeneration surfaces a 502 when xAI returns no request_id", async () => {
+  const originalFetch = globalThis.fetch;
+  let pollCalls = 0;
+  globalThis.fetch = async (url) => {
+    if (String(url) === CREATE_URL) return jsonResponse({});
+    pollCalls += 1;
+    return jsonResponse({ status: "pending" });
+  };
+
+  try {
+    const result = await handleVideoGeneration({
+      body: { model: "xai/grok-imagine-video", prompt: "x" },
+      credentials: { apiKey: "xai-key" },
+      log: null,
+    });
+
+    assert.equal(result.success, false);
+    assert.equal(result.status, 502);
+    assert.match(result.error, /did not return request_id/);
+    assert.equal(pollCalls, 0, "no poll is attempted without a request_id");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("handleVideoGeneration returns 502 when the xAI job status is failed", async () => {
   const originalFetch = globalThis.fetch;
   const originalSetTimeout = globalThis.setTimeout;
